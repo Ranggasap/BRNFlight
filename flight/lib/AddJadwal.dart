@@ -1,6 +1,8 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 
 class AirlineManagementPage extends StatefulWidget {
   const AirlineManagementPage({Key? key}) : super(key: key);
@@ -15,6 +17,16 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
   final TextEditingController _departureController = TextEditingController();
   final TextEditingController _arrivalController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
+
+  // Tambahkan fungsi ini di class _AirlineManagementPageState
+  String formatToRupiah(double amount) {
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    return formatter.format(amount);
+  }
 
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
@@ -61,12 +73,18 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
     }
 
     try {
+      String priceString = _priceController.text
+          .replaceAll('Rp ', '')
+          .replaceAll('.', '')
+          .trim();
+      double price = double.parse(priceString);
+
       await FirebaseFirestore.instance.collection('flights').add({
         'airlineName': _airlineNameController.text,
         'flightNumber': _flightNumberController.text,
         'departure': _departureController.text,
         'arrival': _arrivalController.text,
-        'price': double.parse(_priceController.text),
+        'price': price,
         'date': Timestamp.fromDate(_selectedDate),
         'time': '${_selectedTime.hour}:${_selectedTime.minute}',
         'createdAt': FieldValue.serverTimestamp(),
@@ -242,11 +260,10 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
                       _arrivalController,
                       Icons.flight_land,
                     ),
-                    SizedBox(height: 20),
                     _buildInputField(
                       "Price",
                       _priceController,
-                      Icons.attach_money,
+                      Icons.payments,
                       keyboardType: TextInputType.number,
                     ),
                     SizedBox(height: 20),
@@ -298,7 +315,7 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
                             '${data['departure']} to ${data['arrival']}\n'
                             'Date: ${date.day}/${date.month}/${date.year}\n'
                             'Time: ${data['time']}\n'
-                            'Price: \$${data['price']}',
+                            'Price: ${formatToRupiah(data['price'])}',
                           ),
                           trailing: Row(
                             mainAxisSize: MainAxisSize.min,
@@ -352,6 +369,13 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
+            // Tambahkan kondisi untuk field price
+            inputFormatters: label == "Price"
+                ? [
+                    FilteringTextInputFormatter.digitsOnly,
+                    RupiahInputFormatter(),
+                  ]
+                : null,
             decoration: InputDecoration(
               prefixIcon: Icon(icon, color: Color(0xFF4C53A5)),
               border: InputBorder.none,
@@ -431,6 +455,30 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
   }
 }
 
+class RupiahInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+      TextEditingValue oldValue, TextEditingValue newValue) {
+    if (newValue.selection.baseOffset == 0) {
+      return newValue;
+    }
+
+    double value = double.parse(newValue.text);
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+
+    String newText = formatter.format(value);
+
+    return newValue.copyWith(
+      text: newText,
+      selection: TextSelection.collapsed(offset: newText.length),
+    );
+  }
+}
+
 // edit_flight_page.dart
 
 class EditFlightPage extends StatefulWidget {
@@ -461,7 +509,14 @@ class _EditFlightPageState extends State<EditFlightPage> {
     _flightNumberController.text = data['flightNumber'];
     _departureController.text = data['departure'];
     _arrivalController.text = data['arrival'];
-    _priceController.text = data['price'].toString();
+
+    // Format price ke Rupiah
+    final formatter = NumberFormat.currency(
+      locale: 'id_ID',
+      symbol: 'Rp ',
+      decimalDigits: 0,
+    );
+    _priceController.text = formatter.format(data['price']);
 
     Timestamp timestamp = data['date'] as Timestamp;
     _selectedDate = timestamp.toDate();
@@ -485,15 +540,21 @@ class _EditFlightPageState extends State<EditFlightPage> {
 
   Future<void> _updateFlight() async {
     try {
+      String priceString = _priceController.text
+          .replaceAll('Rp ', '')
+          .replaceAll('.', '')
+          .trim();
+      double price = double.parse(priceString);
+
       await FirebaseFirestore.instance
-          .collection('flights') // Corrected line
+          .collection('flights')
           .doc(widget.flight.id)
           .update({
         'airlineName': _airlineNameController.text,
         'flightNumber': _flightNumberController.text,
         'departure': _departureController.text,
         'arrival': _arrivalController.text,
-        'price': double.parse(_priceController.text),
+        'price': price,
         'date': Timestamp.fromDate(_selectedDate),
         'time': '${_selectedTime.hour}:${_selectedTime.minute}',
       });
@@ -583,11 +644,10 @@ class _EditFlightPageState extends State<EditFlightPage> {
               _arrivalController,
               Icons.flight_land,
             ),
-            SizedBox(height: 20),
             _buildInputField(
               "Price",
               _priceController,
-              Icons.attach_money,
+              Icons.payments,
               keyboardType: TextInputType.number,
             ),
             SizedBox(height: 20),
@@ -626,6 +686,13 @@ class _EditFlightPageState extends State<EditFlightPage> {
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
+            // Tambahkan kondisi untuk field price
+            inputFormatters: label == "Price"
+                ? [
+                    FilteringTextInputFormatter.digitsOnly,
+                    RupiahInputFormatter(),
+                  ]
+                : null,
             decoration: InputDecoration(
               prefixIcon: Icon(icon, color: Color(0xFF4C53A5)),
               border: InputBorder.none,
