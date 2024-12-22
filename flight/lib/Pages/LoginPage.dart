@@ -18,6 +18,10 @@ class _LoginPageState extends State<LoginPage> {
     print('Password: $password');
   }
 
+  void _navigationToRegisterPage(BuildContext context) {
+    Navigator.pushNamed(context, '/register');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -38,7 +42,7 @@ class _LoginPageState extends State<LoginPage> {
             SizedBox(height: 20),
             Image.network(
               'https://images.unsplash.com/photo-1454359960956-27f7f24d09e0?q=80&w=2000&auto=format&fit=crop&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D', // Ganti dengan URL gambar Anda
-              height: 200,
+              height: 300,
               fit: BoxFit.cover,
             ),
             SizedBox(height: 40),
@@ -77,7 +81,7 @@ class _LoginPageState extends State<LoginPage> {
             SizedBox(height: 20),
             OutlinedButton(
               onPressed: () {
-                // Tambahkan logika untuk tombol sign up jika diperlukan
+                _navigationToRegisterPage(context);
               },
               style: OutlinedButton.styleFrom(
                 padding: EdgeInsets.symmetric(vertical: 16),
