@@ -1,12 +1,43 @@
+import 'package:flight/Services/AuthService.dart';
 import 'package:flight/Services/FirestoreService.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart'; // Import Firestore package
 
-class DashboardAdminPage extends StatelessWidget {
-  DashboardAdminPage({Key? key}) : super(key: key);
+class DashboardAdminPage extends StatefulWidget {
+  @override
+  _DashboardAdminPageState createState() => _DashboardAdminPageState();
+}
 
+class _DashboardAdminPageState extends State<DashboardAdminPage> {
   final FirestoreService firestoreService = FirestoreService();
+  final AuthService authService = AuthService();
+
+  bool _isAuthorized = true; // Default to true, will change if not authorized
+
+  @override
+  void initState() {
+    super.initState();
+    _checkUserRole();
+  }
+
+  // Check user role and authorize access to the page
+  Future<void> _checkUserRole() async {
+    try {
+      // Get current user data
+      Map<String, dynamic>? currentUserData = await authService.getCurrentUser();
+      if (currentUserData == null || currentUserData['role'] != 'Admin') {
+        setState(() {
+          _isAuthorized = false;
+        });
+      }
+    } catch (e) {
+      print('Error checking user role: $e');
+      setState(() {
+        _isAuthorized = false;
+      });
+    }
+  }
 
   Future<List<Map<String, dynamic>>> getAllPurchases() async {
     try {
@@ -51,6 +82,33 @@ class DashboardAdminPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!_isAuthorized) {
+      // Unauthorized UI
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Unauthorized'),
+        ),
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Text(
+                'Unauthorized Page',
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.pushReplacementNamed(context, '/home'); // Redirect to Home
+                },
+                child: const Text('Go to Home'),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Admin Dashboard'),
