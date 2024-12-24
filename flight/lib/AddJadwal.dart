@@ -4,6 +4,16 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 
+// Utility function for formatting currency
+String formatToRupiah(double amount) {
+  final formatter = NumberFormat.currency(
+    locale: 'id_ID',
+    symbol: 'Rp ',
+    decimalDigits: 0,
+  );
+  return formatter.format(amount);
+}
+
 class AirlineManagementPage extends StatefulWidget {
   const AirlineManagementPage({Key? key}) : super(key: key);
 
@@ -18,25 +28,86 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
   final TextEditingController _arrivalController = TextEditingController();
   final TextEditingController _priceController = TextEditingController();
 
-  // Tambahkan fungsi ini di class _AirlineManagementPageState
-  String formatToRupiah(double amount) {
-    final formatter = NumberFormat.currency(
-      locale: 'id_ID',
-      symbol: 'Rp ',
-      decimalDigits: 0,
-    );
-    return formatter.format(amount);
-  }
-
   DateTime _selectedDate = DateTime.now();
   TimeOfDay _selectedTime = TimeOfDay.now();
   bool _isAdmin = true;
   bool _showForm = false;
+  String? _selectedAirline;
+  List<String> _airlines = [];
 
   @override
   void initState() {
     super.initState();
     _checkAdminStatus();
+    _fetchAirlines();
+  }
+
+  @override
+  void dispose() {
+    _airlineNameController.dispose();
+    _flightNumberController.dispose();
+    _departureController.dispose();
+    _arrivalController.dispose();
+    _priceController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _fetchAirlines() async {
+    try {
+      // Mengubah collection name menjadi 'airlines'
+      QuerySnapshot snapshot = await FirebaseFirestore.instance
+          .collection('airlines')
+          .orderBy('created_at', descending: true)
+          .get();
+
+      print('Jumlah dokumen: ${snapshot.docs.length}');
+
+      if (snapshot.docs.isEmpty) {
+        print('Tidak ada data airlines ditemukan');
+        setState(() {
+          _airlines = [];
+        });
+        return;
+      }
+
+      List<String> airlineNames = [];
+      for (var doc in snapshot.docs) {
+        try {
+          Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
+
+          // Pastikan field airline_name ada dan berupa string
+          if (data.containsKey('airline_name') &&
+              data['airline_name'] is String) {
+            String name = data['airline_name'];
+            print('Loaded airline: $name');
+            airlineNames.add(name);
+          } else {
+            print('Invalid airline data structure in document ${doc.id}');
+          }
+        } catch (e) {
+          print('Error processing document ${doc.id}: $e');
+        }
+      }
+
+      setState(() {
+        _airlines = airlineNames;
+        // Jika _selectedAirline tidak ada dalam list baru, reset nilainya
+        if (_selectedAirline != null &&
+            !airlineNames.contains(_selectedAirline)) {
+          _selectedAirline = null;
+        }
+      });
+
+      print('Final airlines list: $_airlines');
+    } catch (e) {
+      print('Error fetching airlines: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error loading airlines: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
   }
 
   Future<void> _checkAdminStatus() async {
@@ -61,7 +132,7 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
       return;
     }
 
-    if (_airlineNameController.text.isEmpty ||
+    if (_selectedAirline == null ||
         _flightNumberController.text.isEmpty ||
         _departureController.text.isEmpty ||
         _arrivalController.text.isEmpty ||
@@ -76,11 +147,12 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
       String priceString = _priceController.text
           .replaceAll('Rp ', '')
           .replaceAll('.', '')
+          .replaceAll(',', '')
           .trim();
       double price = double.parse(priceString);
 
       await FirebaseFirestore.instance.collection('flights').add({
-        'airlineName': _airlineNameController.text,
+        'airlineName': _selectedAirline, // Use selected airline name
         'flightNumber': _flightNumberController.text,
         'departure': _departureController.text,
         'arrival': _arrivalController.text,
@@ -127,6 +199,9 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
     _departureController.clear();
     _arrivalController.clear();
     _priceController.clear();
+    setState(() {
+      _selectedAirline = null;
+    });
   }
 
   Future<void> _selectDate() async {
@@ -164,182 +239,54 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    if (!_isAdmin) {
-      return Scaffold(
-        body: Center(
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Text(
-                'Unauthorized Access (Only Admin)',
-                style: TextStyle(fontSize: 20, color: Colors.red),
-              ),
-              SizedBox(height: 20),
-              ElevatedButton(
-                onPressed: () => Navigator.of(context).pop(),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF4C53A5),
-                  padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-                child: Text(
-                  'Back to Home',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.white,
-                  ),
-                ),
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        title: Text(
-          "Airline Management",
+  Widget _buildAirlineDropdown() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Airline Name",
           style: TextStyle(
-            color: Color(0xFF4C53A5),
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
+            fontSize: 16,
+            fontWeight: FontWeight.w600,
+            color: Color(0xFF333333),
           ),
         ),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Color(0xFF4C53A5)),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          setState(() {
-            _showForm = !_showForm;
-          });
-        },
-        backgroundColor: Color(0xFF4C53A5),
-        foregroundColor: Colors.white,
-        child: Icon(_showForm ? Icons.close : Icons.add),
-      ),
-      body: Column(
-        children: [
-          if (_showForm)
-            Expanded(
-              child: SingleChildScrollView(
-                padding: EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildInputField(
-                      "Airline Name",
-                      _airlineNameController,
-                      Icons.flight,
-                    ),
-                    SizedBox(height: 20),
-                    _buildInputField(
-                      "Flight Number",
-                      _flightNumberController,
-                      Icons.numbers,
-                    ),
-                    SizedBox(height: 20),
-                    _buildInputField(
-                      "Departure City",
-                      _departureController,
-                      Icons.flight_takeoff,
-                    ),
-                    SizedBox(height: 20),
-                    _buildInputField(
-                      "Arrival City",
-                      _arrivalController,
-                      Icons.flight_land,
-                    ),
-                    _buildInputField(
-                      "Price",
-                      _priceController,
-                      Icons.payments,
-                      keyboardType: TextInputType.number,
-                    ),
-                    SizedBox(height: 20),
-                    _buildDateTimePicker(),
-                    SizedBox(height: 30),
-                    _buildSaveButton(),
-                  ],
+        SizedBox(height: 8),
+        Container(
+          decoration: BoxDecoration(
+            color: Color(0xFFF7F7F7),
+            borderRadius: BorderRadius.circular(12),
+          ),
+          child: _airlines.isEmpty
+              ? Center(
+                  child: CircularProgressIndicator(), // Loading state
+                )
+              : DropdownButtonFormField<String>(
+                  value: _selectedAirline,
+                  decoration: InputDecoration(
+                    prefixIcon: Icon(Icons.flight, color: Color(0xFF4C53A5)),
+                    border: InputBorder.none,
+                    contentPadding:
+                        EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+                  ),
+                  items: _airlines.map((String airline) {
+                    return DropdownMenuItem<String>(
+                      value: airline,
+                      child: Text(airline),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedAirline = newValue;
+                      _airlineNameController.text = newValue ?? '';
+                      print('Selected airline: $newValue'); // Debug
+                    });
+                  },
+                  hint: Text('Select Airline'),
+                  isExpanded: true,
                 ),
-              ),
-            )
-          else
-            Expanded(
-              child: StreamBuilder<QuerySnapshot>(
-                stream: FirebaseFirestore.instance
-                    .collection('flights')
-                    .orderBy('createdAt', descending: true)
-                    .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
-
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return Center(child: CircularProgressIndicator());
-                  }
-
-                  if (snapshot.data!.docs.isEmpty) {
-                    return Center(child: Text('No flights scheduled'));
-                  }
-
-                  return ListView.builder(
-                    itemCount: snapshot.data!.docs.length,
-                    itemBuilder: (context, index) {
-                      DocumentSnapshot flight = snapshot.data!.docs[index];
-                      Map<String, dynamic> data =
-                          flight.data() as Map<String, dynamic>;
-                      Timestamp timestamp = data['date'] as Timestamp;
-                      DateTime date = timestamp.toDate();
-
-                      return Card(
-                        margin:
-                            EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        child: ListTile(
-                          title: Text(
-                            '${data['airlineName']} - ${data['flightNumber']}',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          subtitle: Text(
-                            '${data['departure']} to ${data['arrival']}\n'
-                            'Date: ${date.day}/${date.month}/${date.year}\n'
-                            'Time: ${data['time']}\n'
-                            'Price: ${formatToRupiah(data['price'])}',
-                          ),
-                          trailing: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconButton(
-                                icon:
-                                    Icon(Icons.edit, color: Color(0xFF4C53A5)),
-                                onPressed: () => _navigateToEditPage(flight),
-                              ),
-                              IconButton(
-                                icon: Icon(Icons.delete, color: Colors.red),
-                                onPressed: () => _deleteFlight(flight.id),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 
@@ -369,7 +316,6 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
-            // Tambahkan kondisi untuk field price
             inputFormatters: label == "Price"
                 ? [
                     FilteringTextInputFormatter.digitsOnly,
@@ -453,6 +399,182 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
       ),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isAdmin) {
+      return Scaffold(
+        body: Center(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Text(
+                'Unauthorized Access (Only Admin)',
+                style: TextStyle(fontSize: 20, color: Colors.red),
+              ),
+              SizedBox(height: 20),
+              ElevatedButton(
+                onPressed: () => Navigator.of(context).pop(),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Color(0xFF4C53A5),
+                  padding: EdgeInsets.symmetric(horizontal: 30, vertical: 15),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'Back to Home',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        title: Text(
+          "Airline Management",
+          style: TextStyle(
+            color: Color(0xFF4C53A5),
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Color(0xFF4C53A5)),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () {
+          setState(() {
+            _showForm = !_showForm;
+          });
+        },
+        backgroundColor: Color(0xFF4C53A5),
+        foregroundColor: Colors.white,
+        child: Icon(_showForm ? Icons.close : Icons.add),
+      ),
+      body: Column(
+        children: [
+          if (_showForm)
+            Expanded(
+              child: SingleChildScrollView(
+                padding: EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _buildAirlineDropdown(),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      "Flight Number",
+                      _flightNumberController,
+                      Icons.numbers,
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      "Departure City",
+                      _departureController,
+                      Icons.flight_takeoff,
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      "Arrival City",
+                      _arrivalController,
+                      Icons.flight_land,
+                    ),
+                    SizedBox(height: 20),
+                    _buildInputField(
+                      "Price",
+                      _priceController,
+                      Icons.payments,
+                      keyboardType: TextInputType.number,
+                    ),
+                    SizedBox(height: 20),
+                    _buildDateTimePicker(),
+                    SizedBox(height: 30),
+                    _buildSaveButton(),
+                  ],
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('flights')
+                    .orderBy('createdAt', descending: true)
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return Center(child: CircularProgressIndicator());
+                  }
+
+                  if (snapshot.data!.docs.isEmpty) {
+                    return Center(child: Text('No flights scheduled'));
+                  }
+
+                  return ListView.builder(
+                    itemCount: snapshot.data!.docs.length,
+                    itemBuilder: (context, index) {
+                      DocumentSnapshot flight = snapshot.data!.docs[index];
+                      Map<String, dynamic> data =
+                          flight.data() as Map<String, dynamic>;
+                      Timestamp timestamp = data['date'] as Timestamp;
+                      DateTime date = timestamp.toDate();
+
+                      return Card(
+                        margin:
+                            EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        child: ListTile(
+                          title: Text(
+                            '${data['airlineName']} - ${data['flightNumber']}',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          subtitle: Text(
+                            '${data['departure']} to ${data['arrival']}\n'
+                            'Date: ${date.day}/${date.month}/${date.year}\n'
+                            'Time: ${data['time']}\n'
+                            'Price: ${formatToRupiah(data['price'])}',
+                          ),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                icon:
+                                    Icon(Icons.edit, color: Color(0xFF4C53A5)),
+                                onPressed: () => _navigateToEditPage(flight),
+                              ),
+                              IconButton(
+                                icon: Icon(Icons.delete, color: Colors.red),
+                                onPressed: () => _deleteFlight(flight.id),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+        ],
+      ),
+    );
+  }
 }
 
 class RupiahInputFormatter extends TextInputFormatter {
@@ -478,8 +600,6 @@ class RupiahInputFormatter extends TextInputFormatter {
     );
   }
 }
-
-// edit_flight_page.dart
 
 class EditFlightPage extends StatefulWidget {
   final DocumentSnapshot flight;
@@ -510,7 +630,6 @@ class _EditFlightPageState extends State<EditFlightPage> {
     _departureController.text = data['departure'];
     _arrivalController.text = data['arrival'];
 
-    // Format price ke Rupiah
     final formatter = NumberFormat.currency(
       locale: 'id_ID',
       symbol: 'Rp ',
@@ -521,7 +640,7 @@ class _EditFlightPageState extends State<EditFlightPage> {
     Timestamp timestamp = data['date'] as Timestamp;
     _selectedDate = timestamp.toDate();
 
-    List<String> timeParts = data['time'].split(':');
+    List<String> timeParts = (data['time'] as String).split(':');
     _selectedTime = TimeOfDay(
       hour: int.parse(timeParts[0]),
       minute: int.parse(timeParts[1]),
@@ -543,6 +662,7 @@ class _EditFlightPageState extends State<EditFlightPage> {
       String priceString = _priceController.text
           .replaceAll('Rp ', '')
           .replaceAll('.', '')
+          .replaceAll(',', '')
           .trim();
       double price = double.parse(priceString);
 
@@ -596,70 +716,6 @@ class _EditFlightPageState extends State<EditFlightPage> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.white,
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.white,
-        title: Text(
-          "Edit Flight Schedule",
-          style: TextStyle(
-            color: Color(0xFF4C53A5),
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        leading: IconButton(
-          icon: Icon(Icons.arrow_back, color: Color(0xFF4C53A5)),
-          onPressed: () => Navigator.pop(context),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildInputField(
-              "Airline Name",
-              _airlineNameController,
-              Icons.flight,
-            ),
-            SizedBox(height: 20),
-            _buildInputField(
-              "Flight Number",
-              _flightNumberController,
-              Icons.numbers,
-            ),
-            SizedBox(height: 20),
-            _buildInputField(
-              "Departure City",
-              _departureController,
-              Icons.flight_takeoff,
-            ),
-            SizedBox(height: 20),
-            _buildInputField(
-              "Arrival City",
-              _arrivalController,
-              Icons.flight_land,
-            ),
-            _buildInputField(
-              "Price",
-              _priceController,
-              Icons.payments,
-              keyboardType: TextInputType.number,
-            ),
-            SizedBox(height: 20),
-            _buildDateTimePicker(),
-            SizedBox(height: 30),
-            _buildUpdateButton(),
-          ],
-        ),
-      ),
-    );
-  }
-
   Widget _buildInputField(
     String label,
     TextEditingController controller,
@@ -686,7 +742,6 @@ class _EditFlightPageState extends State<EditFlightPage> {
           child: TextField(
             controller: controller,
             keyboardType: keyboardType,
-            // Tambahkan kondisi untuk field price
             inputFormatters: label == "Price"
                 ? [
                     FilteringTextInputFormatter.digitsOnly,
@@ -747,25 +802,86 @@ class _EditFlightPageState extends State<EditFlightPage> {
     );
   }
 
-  Widget _buildUpdateButton() {
-    return SizedBox(
-      width: double.infinity,
-      child: ElevatedButton(
-        onPressed: _updateFlight,
-        style: ElevatedButton.styleFrom(
-          padding: EdgeInsets.symmetric(vertical: 16),
-          backgroundColor: Color(0xFF4C53A5),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.white,
+      appBar: AppBar(
+        elevation: 0,
+        backgroundColor: Colors.white,
+        title: Text(
+          "Edit Flight Schedule",
+          style: TextStyle(
+            color: Color(0xFF4C53A5),
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
           ),
         ),
-        child: Text(
-          'Update Flight Schedule',
-          style: TextStyle(
-            fontSize: 18,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-          ),
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back, color: Color(0xFF4C53A5)),
+          onPressed: () => Navigator.pop(context),
+        ),
+      ),
+      body: SingleChildScrollView(
+        padding: EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildInputField(
+              "Airline Name",
+              _airlineNameController,
+              Icons.flight,
+            ),
+            SizedBox(height: 20),
+            _buildInputField(
+              "Flight Number",
+              _flightNumberController,
+              Icons.numbers,
+            ),
+            SizedBox(height: 20),
+            _buildInputField(
+              "Departure City",
+              _departureController,
+              Icons.flight_takeoff,
+            ),
+            SizedBox(height: 20),
+            _buildInputField(
+              "Arrival City",
+              _arrivalController,
+              Icons.flight_land,
+            ),
+            SizedBox(height: 20),
+            _buildInputField(
+              "Price",
+              _priceController,
+              Icons.payments,
+              keyboardType: TextInputType.number,
+            ),
+            SizedBox(height: 20),
+            _buildDateTimePicker(),
+            SizedBox(height: 30),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: _updateFlight,
+                style: ElevatedButton.styleFrom(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  backgroundColor: Color(0xFF4C53A5),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                child: Text(
+                  'Update Flight Schedule',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
