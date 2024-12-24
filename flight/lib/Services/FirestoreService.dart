@@ -34,4 +34,22 @@ class FirestoreService {
     }
     return null;
   }
+
+  // Fungsi untuk menambahkan data maskapai penerbangan ke Firestore
+  Future<void> addAirlineToFirestore({
+    required String airlineName,
+    required String flightCode,
+    required String originCity,
+  }) async {
+    try {
+      await _firestore.collection('airlines').add({
+        'airline_name': airlineName,
+        'flight_code': flightCode,
+        'origin_city': originCity,
+        'created_at': FieldValue.serverTimestamp(),
+      });
+    } catch (e) {
+      print('Error adding airline to Firestore: $e');
+    }
+  }
 }

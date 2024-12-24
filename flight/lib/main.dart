@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flight/Pages/AddAirlinesPage.dart';
 import 'package:flight/Pages/LoginPage.dart';
 import 'package:flight/Pages/RegisterPage.dart';
 import 'package:flight/Pages/TemporaryPages/HomePage.dart';
@@ -18,7 +19,7 @@ class BRNFlightApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       initialRoute: '/',
       routes: {
-        '/': (context) => LoginPage(),
+        '/': (context) => AddAirlinesPage(),
         '/register': (context) => RegisterPage(),
         '/home': (centext) => HomePage()
       },
