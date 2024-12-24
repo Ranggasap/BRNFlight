@@ -52,4 +52,21 @@ class FirestoreService {
       print('Error adding airline to Firestore: $e');
     }
   }
+
+  Future<List<Map<String, dynamic>>> getAllPurchases() async {
+    try {
+      QuerySnapshot snapshot = await _firestore.collection('purchase').get();
+      return snapshot.docs.map((doc) {
+        return {
+          'date': doc['date'], // Timestamp
+          'email': doc['email'], // String
+          'id_flight': doc['id flight'], // String
+          'price': doc['price'], // String
+        };
+      }).toList();
+    } catch (e) {
+      print('Error fetching purchases: $e');
+      return [];
+    }
+  }
 }

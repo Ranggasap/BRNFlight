@@ -1,3 +1,4 @@
+import 'package:flight/Services/AuthService.dart';
 import 'package:flight/Services/FirestoreService.dart';
 import 'package:flutter/material.dart';
 
@@ -13,10 +14,36 @@ class _AddAirlinesPageState extends State<AddAirlinesPage> {
   final TextEditingController _originCityController = TextEditingController();
 
   final FirestoreService _firestoreService = FirestoreService();
+  final AuthService _authService = AuthService();
+
+  bool _isAuthorized = true; // Default authorized
+
+  @override
+  void initState() {
+    super.initState();
+    _checkUserRole();
+  }
+
+  Future<void> _checkUserRole() async {
+    try {
+      // Ambil data pengguna yang sedang login
+      Map<String, dynamic>? currentUserData = await _authService.getCurrentUser();
+      print(currentUserData);
+      if (currentUserData == null || currentUserData['role'] != 'Admin') {
+        setState(() {
+          _isAuthorized = false;
+        });
+      }
+    } catch (e) {
+      print('Error checking user role: $e');
+      setState(() {
+        _isAuthorized = false;
+      });
+    }
+  }
 
   void _submitForm() async {
     if (_formKey.currentState?.validate() ?? false) {
-      // Process form data
       String airlineName = _airlineNameController.text;
       String flightCode = _flightCodeController.text;
       String originCity = _originCityController.text;
@@ -27,12 +54,12 @@ class _AddAirlinesPageState extends State<AddAirlinesPage> {
         originCity: originCity,
       );
 
-      // Show a success message (you can replace this with actual form submission logic)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Airline added: $airlineName')),
       );
 
-      // Optionally, you can clear the form after submission
+      Navigator.pushReplacementNamed(context, '/home');
+
       _airlineNameController.clear();
       _flightCodeController.clear();
       _originCityController.clear();
@@ -41,9 +68,25 @@ class _AddAirlinesPageState extends State<AddAirlinesPage> {
 
   @override
   Widget build(BuildContext context) {
+    if (!_isAuthorized) {
+      // Unauthorized UI
+      return Scaffold(
+        appBar: AppBar(
+          title: const Text('Unauthorized'),
+        ),
+        body: const Center(
+          child: Text(
+            'Unauthorized Page',
+            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          ),
+        ),
+      );
+    }
+
+    // Authorized UI
     return Scaffold(
       appBar: AppBar(
-        title: Text('Add New Airline'),
+        title: const Text('Add New Airline'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
@@ -52,7 +95,7 @@ class _AddAirlinesPageState extends State<AddAirlinesPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(
+              const Text(
                 'Enter Airline Details',
                 textAlign: TextAlign.center,
                 style: TextStyle(
@@ -60,11 +103,11 @@ class _AddAirlinesPageState extends State<AddAirlinesPage> {
                   fontWeight: FontWeight.bold,
                 ),
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               // Airline Name Field
               TextFormField(
                 controller: _airlineNameController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Airline Name',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.airplane_ticket),
@@ -76,11 +119,11 @@ class _AddAirlinesPageState extends State<AddAirlinesPage> {
                   return null;
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               // Flight Code Field
               TextFormField(
                 controller: _flightCodeController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Flight Code',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.code),
@@ -92,11 +135,11 @@ class _AddAirlinesPageState extends State<AddAirlinesPage> {
                   return null;
                 },
               ),
-              SizedBox(height: 20),
+              const SizedBox(height: 20),
               // Origin City Field
               TextFormField(
                 controller: _originCityController,
-                decoration: InputDecoration(
+                decoration: const InputDecoration(
                   labelText: 'Origin City',
                   border: OutlineInputBorder(),
                   prefixIcon: Icon(Icons.location_city),
@@ -108,17 +151,17 @@ class _AddAirlinesPageState extends State<AddAirlinesPage> {
                   return null;
                 },
               ),
-              SizedBox(height: 30),
+              const SizedBox(height: 30),
               // Submit Button
               ElevatedButton(
                 onPressed: _submitForm,
                 style: ElevatedButton.styleFrom(
-                  padding: EdgeInsets.symmetric(vertical: 16),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                child: Text(
+                child: const Text(
                   'Add Airline',
                   style: TextStyle(fontSize: 18),
                 ),
