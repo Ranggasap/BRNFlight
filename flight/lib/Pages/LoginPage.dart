@@ -1,3 +1,4 @@
+import 'package:flight/Services/AuthService.dart';
 import 'package:flutter/material.dart';
 
 class LoginPage extends StatefulWidget {
@@ -8,14 +9,42 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  final AuthService _authService = AuthService();
 
-  void _handleLogin() {
-    String email = _emailController.text;
-    String password = _passwordController.text;
+  void _handleLogin() async {
+    String email = _emailController.text.trim();
+    String password = _passwordController.text.trim();
 
-    // Print email and password to the console
-    print('Email: $email');
-    print('Password: $password');
+    if (email.isEmpty || password.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Please fill in both fields.')),
+      );
+      return;
+    }
+
+    // Login using AuthService
+    try {
+      final user = await _authService.loginWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      if (user != null) {
+        // Login successful, navigate to home page
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Login successful!')),
+        );
+        Navigator.pushReplacementNamed(context, '/home'); // Update sesuai rute Anda
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Invalid email or password.')),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Login failed: $e')),
+      );
+    }
   }
 
   void _navigationToRegisterPage(BuildContext context) {

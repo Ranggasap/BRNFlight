@@ -54,6 +54,29 @@ class AuthService {
     return null;
   }
 
+  // Fungsi untuk login menggunakan email dan password
+  Future<User?> loginWithEmailAndPassword({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      // Login menggunakan Firebase Authentication
+      UserCredential result = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+
+      User? user = result.user;
+
+      // Kembalikan data pengguna jika berhasil login
+      return user;
+    } catch (e) {
+      print('Error logging in user: $e');
+      return null;
+    }
+  }
+
+
   // Fungsi untuk logout
   Future<void> signOut() async {
     try {
