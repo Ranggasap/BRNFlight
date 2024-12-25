@@ -43,7 +43,8 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
 
   Future<List<Map<String, dynamic>>> getAllPurchases() async {
     try {
-      return await firestoreService.getAllPurchases();
+      final purchases = await firestoreService.getAllPurchases();
+      return purchases.take(5).toList();
     } catch (e) {
       print('Error fetching purchases: $e');
       return [];
