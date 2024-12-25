@@ -54,16 +54,13 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
 
   Future<void> _fetchAirlines() async {
     try {
-      // Mengubah collection name menjadi 'airlines'
       QuerySnapshot snapshot = await FirebaseFirestore.instance
           .collection('airlines')
           .orderBy('created_at', descending: true)
           .get();
 
-      print('Jumlah dokumen: ${snapshot.docs.length}');
-
       if (snapshot.docs.isEmpty) {
-        print('Tidak ada data airlines ditemukan');
+        print('No airlines found');
         setState(() {
           _airlines = [];
         });
@@ -74,15 +71,11 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
       for (var doc in snapshot.docs) {
         try {
           Map<String, dynamic> data = doc.data() as Map<String, dynamic>;
-
-          // Pastikan field airline_name ada dan berupa string
           if (data.containsKey('airline_name') &&
               data['airline_name'] is String) {
-            String name = data['airline_name'];
-            print('Loaded airline: $name');
-            airlineNames.add(name);
+            airlineNames.add(data['airline_name']);
           } else {
-            print('Invalid airline data structure in document ${doc.id}');
+            print('Invalid data structure in document ${doc.id}');
           }
         } catch (e) {
           print('Error processing document ${doc.id}: $e');
@@ -91,14 +84,7 @@ class _AirlineManagementPageState extends State<AirlineManagementPage> {
 
       setState(() {
         _airlines = airlineNames;
-        // Jika _selectedAirline tidak ada dalam list baru, reset nilainya
-        if (_selectedAirline != null &&
-            !airlineNames.contains(_selectedAirline)) {
-          _selectedAirline = null;
-        }
       });
-
-      print('Final airlines list: $_airlines');
     } catch (e) {
       print('Error fetching airlines: $e');
       ScaffoldMessenger.of(context).showSnackBar(
