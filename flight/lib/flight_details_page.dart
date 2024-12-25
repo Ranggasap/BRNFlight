@@ -13,6 +13,13 @@ class FlightDetailsPage extends StatefulWidget {
 }
 
 class _FlightDetailsPageState extends State<FlightDetailsPage> {
+<<<<<<< Updated upstream
+=======
+  String? selectedFlightId;
+  DateTime? selectedDate;
+  TimeOfDay? selectedTime;
+  String? departureCity;
+>>>>>>> Stashed changes
   final currentUser = FirebaseAuth.instance.currentUser;
 
   final Map<String, String> cityDescriptions = {
@@ -56,6 +63,7 @@ class _FlightDetailsPageState extends State<FlightDetailsPage> {
     ],
   };
 
+<<<<<<< Updated upstream
   // Format harga dengan format rupiah
   String formatCurrency(int price) {
     final formatter = NumberFormat.simpleCurrency(locale: 'id_ID', decimalDigits: 0);
@@ -64,14 +72,43 @@ class _FlightDetailsPageState extends State<FlightDetailsPage> {
 
   Future<void> _bookFlight(Map<String, dynamic> flight) async {
     final dateTime = flight['date'].toDate();
+=======
+  String formatCurrency(int amount) {
+    final formatter = NumberFormat.currency(locale: 'id_ID', symbol: 'Rp.', decimalDigits: 0);
+    return formatter.format(amount);
+  }
+
+  Future<void> _bookFlight(Map<String, dynamic> flight) async {
+    if (departureCity == null || selectedDate == null || selectedTime == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Lengkapi semua informasi pemesanan.")),
+      );
+      return;
+    }
+
+    final dateTime = DateTime(
+      selectedDate!.year,
+      selectedDate!.month,
+      selectedDate!.day,
+      selectedTime!.hour,
+      selectedTime!.minute,
+    );
+
+    final dateFormatted = Timestamp.fromDate(dateTime);
+>>>>>>> Stashed changes
 
     // Data untuk history
     final historyData = {
       "airlineName": flight['airlineName'],
       "arrivalCity": flight['arrival'],
       "createAt": FieldValue.serverTimestamp(),
+<<<<<<< Updated upstream
       "date": flight['date'],
       "departureCity": flight['departure'],
+=======
+      "date": dateFormatted,
+      "departureCity": departureCity,
+>>>>>>> Stashed changes
       "email": currentUser?.email,
       "flightNumber": flight['flightNumber'],
       "price": flight['price'],
@@ -79,9 +116,15 @@ class _FlightDetailsPageState extends State<FlightDetailsPage> {
 
     // Data untuk purchase
     final purchaseData = {
+<<<<<<< Updated upstream
       "date": flight['date'],
       "email": currentUser?.email,
       "id flight": flight['flightNumber'],
+=======
+      "date": dateFormatted,
+      "email": currentUser?.email,
+      "idFlight": flight['flightNumber'],
+>>>>>>> Stashed changes
       "price": flight['price'],
     };
 
@@ -100,6 +143,7 @@ class _FlightDetailsPageState extends State<FlightDetailsPage> {
     await showDialog(
       context: context,
       builder: (context) {
+<<<<<<< Updated upstream
         final dateTime = flight['date'].toDate();
         return AlertDialog(
           title: Text("Detail Pemesanan"),
@@ -116,6 +160,84 @@ class _FlightDetailsPageState extends State<FlightDetailsPage> {
               // Format price ke dalam format rupiah
               Text("Price: ${formatCurrency(flight['price'])}"),
             ],
+=======
+        return AlertDialog(
+          title: Text("Isi Detail Pemesanan"),
+          content: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                TextField(
+                  decoration: InputDecoration(labelText: "Kota Keberangkatan"),
+                  onChanged: (value) {
+                    departureCity = value;
+                  },
+                ),
+                SizedBox(height: 10),
+                ListTile(
+                  title: Row(
+                    children: [
+                      Icon(Icons.calendar_today, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          selectedDate == null
+                              ? "Pilih Tanggal"
+                              : "Tanggal: ${DateFormat('dd MMM yyyy').format(selectedDate!)}",
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+                  trailing: Icon(Icons.edit_calendar, color: Colors.blue),
+                  onTap: () async {
+                    final date = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime(2100),
+                    );
+                    if (date != null) {
+                      setState(() {
+                        selectedDate = date;
+                      });
+                    }
+                  },
+                ),
+                SizedBox(height: 10),
+                ListTile(
+                  title: Row(
+                    children: [
+                      Icon(Icons.access_time, color: Colors.blue),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          selectedTime == null
+                              ? "Pilih Waktu"
+                              : "Waktu: ${selectedTime!.format(context)}",
+                          style: TextStyle(fontSize: 16),
+                        ),
+                      ),
+                    ],
+                  ),
+                  trailing: Icon(Icons.edit, color: Colors.blue),
+                  onTap: () async {
+                    final time = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.now(),
+                    );
+                    if (time != null) {
+                      setState(() {
+                        selectedTime = time;
+                      });
+                    }
+                  },
+                ),
+
+
+              ],
+            ),
+>>>>>>> Stashed changes
           ),
           actions: [
             TextButton(
@@ -220,6 +342,7 @@ class _FlightDetailsPageState extends State<FlightDetailsPage> {
                   itemBuilder: (context, index) {
                     final flight = flights[index].data() as Map<String, dynamic>;
                     return Card(
+<<<<<<< Updated upstream
                       elevation: 3,
                       margin: const EdgeInsets.symmetric(vertical: 8),
                       child: ListTile(
@@ -233,6 +356,14 @@ class _FlightDetailsPageState extends State<FlightDetailsPage> {
                           style: TextStyle(fontSize: 14, color: Colors.grey[600]),
                         ),
                         trailing: Icon(Icons.arrow_forward, color: Colors.blue),
+=======
+                      child: ListTile(
+                        title: Text("${flight['airlineName']} - ${flight['flightNumber']}"),
+                        subtitle: Text(
+                            "Dari ${flight['departure']} ke ${flight['arrival']}"),
+                        trailing: Text(formatCurrency(flight['price']),
+                            style: TextStyle(color: Colors.green)),
+>>>>>>> Stashed changes
                         onTap: () {
                           _showBookingDialog(flight);
                         },
