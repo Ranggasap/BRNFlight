@@ -23,7 +23,7 @@ class BRNFlightApp extends StatelessWidget {
       routes: {
         '/': (context) => LoginPage(),
         '/register': (context) => RegisterPage(),
-        '/home': (centext) => HomePage(),
+        '/home': (centext) => HomePageTemporary(),
         '/addAirlines': (ccontext) => AddAirlinesPage(),
         '/admindashboard': (context) => DashboardAdminPage()
       },
