@@ -1,4 +1,9 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flight/Pages/AddAirlinesPage.dart';
+import 'package:flight/Pages/DashboardAdminPage.dart';
+import 'package:flight/Pages/LoginPage.dart';
+import 'package:flight/Pages/RegisterPage.dart';
+import 'package:flight/Pages/TemporaryPages/HomePage.dart';
 import 'package:flight/firebase_options.dart';
 import 'package:flutter/material.dart';
 import 'home_page.dart';

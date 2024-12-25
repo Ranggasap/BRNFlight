@@ -13,7 +13,9 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
   final FirestoreService firestoreService = FirestoreService();
   final AuthService authService = AuthService();
 
-  bool _isAuthorized = true; // Default to true, will change if not authorized
+  bool _isAuthorized = true;
+  List<Map<String, dynamic>> _searchResults = [];
+  final TextEditingController _emailController = TextEditingController();
 
   @override
   void initState() {
@@ -45,6 +47,20 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
     } catch (e) {
       print('Error fetching purchases: $e');
       return [];
+    }
+  }
+
+  Future<void> _searchByEmail() async {
+    String email = _emailController.text.trim();
+    if (email.isEmpty) return;
+
+    try {
+      List<Map<String, dynamic>> results = await firestoreService.getPurchasesByEmail(email);
+      setState(() {
+        _searchResults = results;
+      });
+    } catch (e) {
+      print('Error searching purchases by email: $e');
     }
   }
 
@@ -207,6 +223,54 @@ class _DashboardAdminPageState extends State<DashboardAdminPage> {
                     ],
                   ),
                 ),
+                const SizedBox(height: 16),
+                // Search Section
+                const Text('Find Ticket by Email', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: TextField(
+                        controller: _emailController,
+                        decoration: const InputDecoration(
+                          labelText: 'Email',
+                          border: OutlineInputBorder(),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton(
+                      onPressed: _searchByEmail,
+                      child: const Text('Search'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                if (_searchResults.isNotEmpty)
+                  Table(
+                    border: TableBorder.all(color: Colors.black),
+                    columnWidths: const {
+                      0: FlexColumnWidth(2),
+                      1: FlexColumnWidth(1),
+                      2: FlexColumnWidth(2),
+                    },
+                    children: [
+                      const TableRow(
+                        children: [
+                          Padding(padding: EdgeInsets.all(8.0), child: Text('Email', style: TextStyle(fontWeight: FontWeight.bold))),
+                          Padding(padding: EdgeInsets.all(8.0), child: Text('Ticket Price', style: TextStyle(fontWeight: FontWeight.bold))),
+                          Padding(padding: EdgeInsets.all(8.0), child: Text('Purchased Date', style: TextStyle(fontWeight: FontWeight.bold))),
+                        ],
+                      ),
+                      ..._searchResults.map((item) => TableRow(
+                        children: [
+                          Padding(padding: const EdgeInsets.all(8.0), child: Text(item['email'])),
+                          Padding(padding: const EdgeInsets.all(8.0), child: Text(formatCurrency(item['price'] ?? 0.0))),
+                          Padding(padding: const EdgeInsets.all(8.0), child: Text(formatDate(item['date']))),
+                        ],
+                      )),
+                    ],
+                  ),
                 const SizedBox(height: 16),
                 // Summary Text
                 const Text(

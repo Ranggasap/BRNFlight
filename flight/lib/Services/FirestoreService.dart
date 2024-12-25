@@ -69,4 +69,26 @@ class FirestoreService {
       return [];
     }
   }
+
+  // Fungsi untuk mencari semua data purchase berdasarkan email
+  Future<List<Map<String, dynamic>>> getPurchasesByEmail(String email) async {
+    try {
+      QuerySnapshot snapshot = await _firestore
+          .collection('purchase')
+          .where('email', isEqualTo: email)
+          .get();
+      return snapshot.docs.map((doc) {
+        return {
+          'date': doc['date'], // Timestamp
+          'email': doc['email'], // String
+          'id_flight': doc['id flight'], // String
+          'price': doc['price'], // String
+        };
+      }).toList();
+    } catch (e) {
+      print('Error fetching purchases by email: $e');
+      return [];
+    }
+  }
+
 }
